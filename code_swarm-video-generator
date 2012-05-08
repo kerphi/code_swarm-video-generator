@@ -1,0 +1,235 @@
+#!/bin/bash 
+#
+# Codeswarm video generator
+#
+
+
+# default parameters
+CURRENT_PWD=`pwd`
+AVATAR_PATH="$CURRENT_PWD/avatar"
+SVN_REPOSITORY=""
+FRAME_PER_DAY=30
+SVN_RANGE="HEAD:1"
+VIDEO_PATH="$CURRENT_PWD/code_swarm.avi"
+TMP_PATH="/tmp/cvg"
+SHOW_USERNAME="true"
+
+for i in $*
+do
+  case $i in
+    --show-username=*)
+      SHOW_USERNAME=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    --tmp-dir=*)
+      TMP_PATH=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    --output=*)
+      VIDEO_PATH=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    --fpd=*)
+      FRAME_PER_DAY=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    --svn-range=*)
+      SVN_RANGE=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    --avatar-dir=*)
+      AVATAR_PATH=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+    *)
+      SVN_REPOSITORY=$i
+    ;;
+    esac
+done
+
+if [ $# -eq 0 ]; then
+    echo "Usage: `basename $0` [--show-username=[true|false]] [--fpd=30] [--svn-range=HEAD:1] [--tmp-dir=/tmp/cvg] [--output=./code_swarm.avi] svn_repository_url_or_path" >&2
+    exit 1
+fi
+
+
+# echo $SHOW_USERNAME
+# echo $TMP_PATH
+# echo $VIDEO_PATH
+# echo $FRAME_PER_DAY
+# echo $SVN_RANGE
+# echo $AVATAR_PATH
+# echo $SVN_REPOSITORY
+
+set -e -x
+
+# install dependencies
+dpkg -l ant sun-java6-jdk ffmpeg2theora ffmpeg python git-core >/dev/null
+if [ "$?" == "1" ]; then
+  sudo apt-get install ant sun-java6-jdk ffmpeg2theora ffmpeg python git-core
+  sudo update-java-alternatives -s java-6-sun
+fi
+
+# download codeswarm
+mkdir -p $TMP_PATH ; cd $TMP_PATH
+if [ ! -d ./code_swarm/ ]; then
+  git clone https://kerphi@github.com/kerphi/code_swarm.git
+fi
+
+# latest activity of svn
+cd $TMP_PATH
+svn log $SVN_REPOSITORY -r$SVN_RANGE -v > ./code_swarm/activity.log
+
+
+# prepare code_swarm
+cd $TMP_PATH/code_swarm/
+mkdir -p frames
+rm -f ./frames/*
+rm -f ./data/cvg.config
+cp -f $AVATAR_PATH/*.png ./data/local_avatars/
+
+# convert svn activity log to xml
+python ./bin/convert_logs.py -s ./activity.log -o ./data/activity.xml
+
+# configure codeswarm
+cat << EOF > ./data/cvg.config
+
+# Frame width
+Width=640
+
+# Frame height
+Height=480
+
+# Input file
+InputFile=data/activity.xml
+
+
+# Optional Method instead of MillisecondsPerFrame
+FramesPerDay=$FRAME_PER_DAY
+
+# Background in R,G,B
+Background=0,0,0
+
+# Maximum number of background threads, used mostly for writing out snapshots
+#   When taking snapshots this setting has a significant effect on memory use
+MaxThreads=8
+
+# Save each frame to an image?
+TakeSnapshots=true
+
+# Where to save the frames
+SnapshotLocation=frames/#####.png
+
+ShowUserName=$SHOW_USERNAME
+
+## How to draw names (choose as many as you like)
+# Draw sharp names?
+DrawNamesSharp=true
+# And draw a glow around names? (kinda slow)
+DrawNamesHalos=false
+
+## How to draw files (choose as many as you like)
+# Draw sharp files?
+DrawFilesSharp=false
+# Draw fuzzy files?
+DrawFilesFuzzy=true
+# Draw jelly files?
+DrawFilesJelly=false
+
+CircularAvatars=true
+
+# Show a legend of colors and their labels
+ShowLegend=true
+
+# Show a histogram of edits over time
+ShowHistory=true
+
+# Show the date
+ShowDate=true
+
+# Show edges between authors and files, mostly for debug purpose
+ShowEdges=false
+
+# Turn on debug info
+ShowDebug=false
+
+# Font for text throughout the visualization
+Font=SansSerif
+FontSize=10
+FontColor=255,255,255
+
+ColorAssign1="doc",".*doc.*", 238,68,119, 238,68,119
+ColorAssign2="c",".*\.c", 0,255,255, 0,255,255
+ColorAssign4="h",".*\.h", 236,51,17, 236,51,17
+ColorAssign3="php",".*\.php", 0,255,0, 0,255,0
+ColorAssign5="js",".*\.js", 255,0,0, 255,0,0
+
+# Font for people's names immediately after they've made an edit
+BoldFont=SansSerif
+BoldFontSize=14
+
+# Natural distance of files to people
+EdgeLength=25
+
+# Initial life values
+EdgeLife=150
+FileLife=150
+PersonLife=255
+
+# How much life is lost per frame
+EdgeDecrement=-2
+FileDecrement=-2
+PersonDecrement=-1
+
+# Initial mass
+FileMass=1.0
+PersonMass=100.0
+
+# Controls how long a node a person or file is highlighted after
+# they're involved in an edit.
+HighlightPct=5
+
+## Physics engine selection and configuration
+# Directory physics engine config files reside in.
+PhysicsEngineConfigDir=physics_engine
+
+## Physical engine selection and configuration
+# Force calculation algorithms (PhysicsEngineLegacy, PhysicsEngineSimple...) :
+PhysicsEngineSelection=PhysicsEngineOrderly
+
+#Don't assume the input is sorted
+IsInputSorted=true
+
+# Particle sprite file
+ParticleSpriteFile=src/particle.png
+
+# OpenGL has problems on some platforms.  We're closer to having it work
+# automatically out of the box, but not close enough to enable it by default
+UseOpenGL=false
+
+# Default user avatar
+#AvatarFetcher=GravatarFetcher
+
+# Other common avatar options:
+
+#AvatarFetcher=NoAvatar
+
+# looks for avatar images (with the same name as the user name) in
+# the LocalAvatarDirectory
+AvatarFetcher=LocalAvatar
+
+# Other options include: monsterid, wavatar
+GravatarFallback=identicon
+
+#Size in pixels of the width and height of avatar images
+AvatarSize=50
+
+# Used by the LocalAvatar fetcher
+LocalAvatarDirectory=data/local_avatars/
+LocalAvatarDefaultPic=default.png
+EOF
+
+ant
+./run.sh ./data/cvg.config
+
+# encode the video
+rm -f ./activity.mov
+ffmpeg -f image2 -r 24 -i ./frames/%05d.png -sameq ./activity.mov -pass 2
+
+cd $CURRENT_PWD
+ffmpeg2theora -v 7 --optimize $TMP_PATH/code_swarm/activity.mov  --output $VIDEO_PATH
+
