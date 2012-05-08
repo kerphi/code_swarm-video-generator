@@ -11,3 +11,17 @@ Example:
 
 It will produce this video:
 https://github.com/kerphi/code_swarm-video-generator/raw/master/subversion-project.avi
+
+
+## Options
+
+    --show-username: true or false, if true logins are displayed near the avatar
+    --output: filename and path of the final video
+    --fpd: frame per day (low number will make a fast video)
+    --svn-range: svn log range 
+    --avatar-dir: path where ar located avatars
+    --tmp-dir: a temporary directory to use for interna work
+
+## Avatars
+
+You can add avatars in the avatar/ folder. Each avatar should be 40x40 in PNG. The avatar's filename should be {login}.png where {login} is the name of the SVN login from the repository. If the image is not found, default.png will be used.
