@@ -15,12 +15,12 @@ https://github.com/kerphi/code_swarm-video-generator/raw/master/subversion-proje
 
 ## Options
 
+    --svn-range: svn log range 
     --show-username: true or false, if true logins are displayed near the avatar
     --output: filename and path of the final video
     --fpd: frame per day (low number will make a fast video)
-    --svn-range: svn log range 
-    --avatar-dir: path where ar located avatars
-    --tmp-dir: a temporary directory to use for interna work
+    --avatar-dir: absolute path where are located avatars
+    --tmp-dir: absolute path for a temporary directory (used for internal work)
 
 ## Avatars
 
