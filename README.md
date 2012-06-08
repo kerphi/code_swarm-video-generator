@@ -24,4 +24,4 @@ https://github.com/kerphi/code_swarm-video-generator/raw/master/subversion-proje
 
 ## Avatars
 
-You can add avatars in the avatar/ folder. Each avatar should be 40x40 in PNG. The avatar's filename should be {login}.png where {login} is the name of the SVN login from the repository. If the image is not found, default.png will be used.
+You can add avatars in the avatar/ folder. Each avatar should be 50x50 in PNG. The avatar's filename should be {login}.png where {login} is the name of the SVN login from the repository. If the image is not found, default.png will be used.
